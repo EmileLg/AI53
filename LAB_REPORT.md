@@ -61,3 +61,13 @@ These small differences add up over training. The seed gives identical results o
 - **Git remote** (GitHub, `origin`): stores the code, configuration and history, including the small `data/raw.dvc` pointer file with the hash of the images, but not the images themselves.
 - **DVC remote** (`lab-data`, the folder `../ai53-phase1-dvc-storage`): stores the actual image files, saved under their content hash, so the pointer in Git can be turned back into the real data with `dvc pull`.
 - **Does `git push` transfer the raw images?** No, `git push` only sends the `.dvc` pointer because `data/raw/` is ignored by Git, so the images have to be uploaded separately with `dvc push`.
+
+## Milestone 4 - Design the DVC pipeline
+
+- **Should PREPARE depend on `reports/data_quality.json`?** Yes. This creates the link `validate -> prepare`, so DVC always runs the quality gate first. If validation fails, the report isn't written and PREPARE never runs on bad data.
+- **Should PREPARE also depend directly on `data/raw`?** Yes, because PREPARE reads the images itself. The quality report only has counts, so if an image changes but the counts stay the same, the report doesn't change. Without `data/raw` as a dependency, PREPARE would wrongly be skipped.
+- **Which `params.yaml` changes should rerun TRAIN?** Everything TRAIN reads: `train.*` (batch size, epochs, learning rate, dropout, seed), `augmentation.*`, `data.image_size`, `compute.device` and `tracking.*` (where the Run is logged). Changing `evaluation.batch_size` or `selection.run_id` must not retrain the model, so they are not listed. That's why I listed single keys instead of whole sections.
+- **Why should EVALUATE track `selection.run_id`?** The test results depend on which model is tested. If I select another Run, DVC has to see that the test metrics are out of date and run EVALUATE again. It also records in Git which Run the reported test score belongs to.
+- **Which file has scores DVC should track as metrics?** `reports/test_metrics.json` (final test accuracy and macro-F1). I also marked `reports/train_summary.json` as metrics because it holds the validation scores, so `dvc metrics show` can compare runs.
+
+**Note:** EVALUATE also depends on the train/validation manifests, because `evaluate.py` recomputes `training_data_identity()` to check that the selected Run was trained on the current data. It doesn't depend on `model.pt`, since the model comes from MLflow, which keeps the test set out of the TRAIN branch.
