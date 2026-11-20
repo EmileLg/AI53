@@ -32,3 +32,24 @@ A `model.pt` only shows that *some* training run finished once. It holds the wei
 - **Evidence:** it holds no validation metrics or training curves and is overwritten by every run. We cannot show it is the selected candidate or that the test set was not used to choose it.
 
 Reproducibility means someone else can rebuild the result from recorded code, data, environment and parameters and get the same metrics. A working checkpoint is only an artifact; without its provenance it cannot be checked.
+
+## Milestone 1 - Make training repeatable
+
+### Environment files
+
+- **`pyproject.toml`**: describes the project and the packages it needs (torch, mlflow, dvc...), with allowed version ranges. It says *what* we need, not the exact versions.
+- **`uv.lock`**: records the exact version and hash of every package, including dependencies of dependencies. With `uv sync --locked` everyone installs exactly the same environment, and `uv lock --check` fails if `pyproject.toml` and the lock file don't match.
+- **`.venv/`**: the local virtual environment that uv builds from `uv.lock`. It holds the installed packages for this project only. It is not committed (it's in `.gitignore`) because it can be rebuilt from the lock file at any time.
+
+### Engineering checkpoint 2
+
+**Does `random_state=42` guarantee bit-for-bit identical results on every CPU/GPU/software stack?**
+
+No. The seed only fixes the random numbers (weight init, shuffle order, dropout, augmentation). The calculations done with them can still differ:
+
+- CPUs and GPUs don't add floating-point numbers in the same order, and float addition is not associative, so results differ slightly.
+- Some GPU operations are non-deterministic by default, even with a fixed seed.
+- Other versions of PyTorch, CUDA, the math libraries, Pillow or the OS can use different algorithms.
+
+These small differences add up over training. The seed gives identical results on the **same machine, device and locked environment**. That's why we also lock the environment with `uv.lock` and will record the device and library versions for each run. On a different setup, we can only expect very close metrics, not identical bits.
+
