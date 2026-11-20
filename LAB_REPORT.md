@@ -53,3 +53,11 @@ No. The seed only fixes the random numbers (weight init, shuffle order, dropout,
 
 These small differences add up over training. The seed gives identical results on the **same machine, device and locked environment**. That's why we also lock the environment with `uv.lock` and will record the device and library versions for each run. On a different setup, we can only expect very close metrics, not identical bits.
 
+
+## Milestone 2 - Extract and track the images
+
+### Engineering checkpoint 3
+
+- **Git remote** (GitHub, `origin`): stores the code, configuration and history, including the small `data/raw.dvc` pointer file with the hash of the images, but not the images themselves.
+- **DVC remote** (`lab-data`, the folder `../ai53-phase1-dvc-storage`): stores the actual image files, saved under their content hash, so the pointer in Git can be turned back into the real data with `dvc pull`.
+- **Does `git push` transfer the raw images?** No, `git push` only sends the `.dvc` pointer because `data/raw/` is ignored by Git, so the images have to be uploaded separately with `dvc push`.
