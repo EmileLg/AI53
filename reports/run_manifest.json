@@ -6,7 +6,7 @@
     "epochs": 4,
     "horizontal_flip": 0.5,
     "image_size": 96,
-    "learning_rate": 0.001,
+    "learning_rate": 0.0003,
     "rotation_degrees": 10.0
   },
   "data": {
@@ -23,11 +23,11 @@
   },
   "execution": {
     "device": "cpu",
-    "mlflow_run_id": "d7f31458868947a8817363e5f98676dc",
+    "mlflow_run_id": "5867735848e64a468cc3e29066036840",
     "random_state": 42
   },
   "git": {
-    "commit": "7a6f7a147e2c8496bc3c14b9c822c6542e2cca52",
+    "commit": "5d5a3e490fa0a8155f5f52936211a915ac76df24",
     "dirty": true
   }
 }

@@ -109,3 +109,47 @@ These small differences add up over training. The seed gives identical results o
 - **Main validation metric:** `val_macro_f1` at the final epoch. **Tie-break:** if two Runs have the same macro-F1 (to 3 decimals), I choose the lower `val_loss`. Macro-F1 gives the same weight to the 3 classes, so it's a better choice than accuracy if one disease class is predicted badly.
 - **Expected effect of a lower learning rate (0.001 -> 0.0003):** with only 4 epochs, I expect the model to learn more slowly: a higher train and validation loss at each epoch and probably a slightly lower validation macro-F1, but smoother, more stable curves.
 - **Run A (baseline, `learning_rate=0.001`):** `d7f31458868947a8817363e5f98676dc`
+- **Run B (`learning_rate=0.0003`):** `5867735848e64a468cc3e29066036840`
+
+### 6.4 Observed results
+
+| Check | VALIDATE | PREPARE | TRAIN | EVALUATE |
+|-------|----------|---------|-------|----------|
+| Run A: first `dvc repro train` (no `dvc.lock` yet) | RERUN | RERUN | RERUN | NOT RUN |
+| 1. Run again, nothing changed | REUSED | REUSED | REUSED | NOT RUN |
+| 2. Comment in `src/validate_data.py` | RERUN | REUSED | REUSED | NOT RUN |
+| Run B: `train.learning_rate` 0.001 -> 0.0003 | REUSED | REUSED | RERUN | NOT RUN |
+
+Terminal lines:
+
+```text
+# Run A
+Running stage 'validate':
+Running stage 'prepare':
+Running stage 'train':
+Training complete. MLflow Run ID: d7f31458868947a8817363e5f98676dc
+
+# Check 1
+Stage 'validate' didn't change, skipping
+Stage 'prepare' didn't change, skipping
+Stage 'train' didn't change, skipping
+Data and pipelines are up to date.
+
+# Check 2
+Running stage 'validate':
+> uv run --locked python -m src.validate_data
+Stage 'prepare' didn't change, skipping
+Stage 'train' didn't change, skipping
+
+# Run B
+Stage 'validate' didn't change, skipping
+Stage 'prepare' didn't change, skipping
+Running stage 'train':
+Training complete. MLflow Run ID: 5867735848e64a468cc3e29066036840
+```
+
+**Comparison with the predictions:**
+- **Check 2** matches my prediction for the `validate_data.py` row. VALIDATE reran because its code dep changed, but `reports/data_quality.json` had the same content (same MD5 before and after: `139ec61e...`), so PREPARE's deps didn't change and DVC skipped it, and TRAIN with it.
+- **Run B** matches the `learning_rate` row. Only TRAIN has `train.learning_rate` in its `params`, so VALIDATE and PREPARE were skipped. EVALUATE was not run because `dvc repro train` only runs `train` and the stages before it.
+- **Run A** reran everything because there was no `dvc.lock` yet, so DVC had nothing to compare with. This isn't one of the predicted rows. Check 1 shows that once `dvc.lock` exists, nothing reruns without a change.
+- **Difference I didn't expect:** Run B's manifest says `dirty: true` although I committed before training. Before running a stage, DVC deletes that stage's outputs. `reports/run_manifest.json`, `train_summary.json` and `training_curves.png` are tracked by Git (`cache: false`), so they were missing when the manifest ran `git status`. The code at commit `5d5a3e4` was clean; only TRAIN's own outputs show as changed.
