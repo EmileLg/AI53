@@ -31,6 +31,15 @@ def training_data_identity(
     return digest.hexdigest()
 
 
+# Outputs of the TRAIN stage in dvc.yaml.
+TRAIN_OUTPUTS = (
+    "models/model.pt",
+    "reports/run_manifest.json",
+    "reports/train_summary.json",
+    "reports/training_curves.png",
+)
+
+
 def _git(*args: str) -> str | None:
     """Run a Git command and return its output, or None if Git fails
     (for example when the folder is not a Git repository)."""
@@ -58,7 +67,10 @@ def build_run_manifest(params: dict, device: str, mlflow_run_id: str) -> dict:
     import torch  # imported here so the module stays light for other callers
 
     commit = _git("rev-parse", "HEAD")
-    status = _git("status", "--porcelain")
+    # DVC deletes TRAIN's outputs before running it, and some of them are
+    # tracked by Git, so leave them out: only code/config changes count.
+    excluded = [f":(exclude){path}" for path in TRAIN_OUTPUTS]
+    status = _git("status", "--porcelain", "--", ".", *excluded)
     train = params["train"]
     augmentation = params["augmentation"]
 
