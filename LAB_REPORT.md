@@ -153,3 +153,11 @@ Training complete. MLflow Run ID: 5867735848e64a468cc3e29066036840
 - **Run B** matches the `learning_rate` row. Only TRAIN has `train.learning_rate` in its `params`, so VALIDATE and PREPARE were skipped. EVALUATE was not run because `dvc repro train` only runs `train` and the stages before it.
 - **Run A** reran everything because there was no `dvc.lock` yet, so DVC had nothing to compare with. This isn't one of the predicted rows. Check 1 shows that once `dvc.lock` exists, nothing reruns without a change.
 - **Difference I didn't expect:** Run B's manifest says `dirty: true` although I committed before training. Before running a stage, DVC deletes that stage's outputs. `reports/run_manifest.json`, `train_summary.json` and `training_curves.png` are tracked by Git (`cache: false`), so they were missing when the manifest ran `git status`. The code at commit `5d5a3e4` was clean; only TRAIN's own outputs show as changed.
+
+## Milestone 7 - Compare three controlled runs
+
+### 7.1 Run C
+
+**Change:** starting from Run A (`learning_rate` back to 0.001), I only set `augmentation.enabled: true` (random horizontal flip with p=0.5 and rotation up to 10 degrees on the training images). Data, seed, epochs and the other settings stay the same.
+
+**Prediction:** augmentation shows the model a slightly different version of each image at every epoch, so the training task is harder. I expect a **higher training loss** than Run A and a **smaller gap between train and validation loss**. With only 4 epochs, the model doesn't have time to benefit much from the extra variety, so I expect the validation macro-F1 to stay **close to Run A** (maybe slightly lower). The benefit of augmentation usually shows up with more epochs, when the baseline starts to overfit.
