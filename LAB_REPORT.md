@@ -161,3 +161,25 @@ Training complete. MLflow Run ID: 5867735848e64a468cc3e29066036840
 **Change:** starting from Run A (`learning_rate` back to 0.001), I only set `augmentation.enabled: true` (random horizontal flip with p=0.5 and rotation up to 10 degrees on the training images). Data, seed, epochs and the other settings stay the same.
 
 **Prediction:** augmentation shows the model a slightly different version of each image at every epoch, so the training task is harder. I expect a **higher training loss** than Run A and a **smaller gap between train and validation loss**. With only 4 epochs, the model doesn't have time to benefit much from the extra variety, so I expect the validation macro-F1 to stay **close to Run A** (maybe slightly lower). The benefit of augmentation usually shows up with more epochs, when the baseline starts to overfit.
+
+### 7.2 Validation results (final epoch)
+
+All three Runs have the same `training_data_identity` (`8fa943ff...`), seed (42), epochs (4), batch size (32) and dropout (0.3), as I checked in MLflow. Only the controlled change differs.
+
+| Run | Controlled change | Val. Accuracy | Val. Macro-F1 | Training time | MLflow Run ID |
+|-----|-------------------|---------------|---------------|---------------|---------------|
+| A | Baseline (`lr=0.001`, no augmentation) | 0.6391 | 0.6254 | 9.3 s | `d7f31458868947a8817363e5f98676dc` |
+| B | `learning_rate` 0.001 -> 0.0003 | 0.6165 | 0.6091 | 10.3 s | `5867735848e64a468cc3e29066036840` |
+| C | `augmentation.enabled` false -> true | 0.6541 | 0.6416 | 10.0 s | `f46773905ce54c34bc2e714d3ff90041` |
+
+**B vs A:** the results **support** my prediction. With the lower learning rate the model learned more slowly: the losses are higher at every epoch (final val loss 0.8927 vs 0.8328, train loss 0.9198 vs 0.8672) and the final macro-F1 is lower (-0.016). The B curves are still going down at epoch 4, so with more epochs B could catch up. We can't tell from 4 epochs whether it would end up better.
+
+**C vs A:** the results **partly support** my prediction. The training loss is higher with augmentation (0.8770 vs 0.8672), as expected, and the validation loss is almost the same (0.8354 vs 0.8328). But the gap between train and val loss isn't smaller, and macro-F1 is slightly *higher* (+0.016) instead of equal or lower.
+
+**Limits:** these differences are small. On 133 validation images, accuracy 0.6391 -> 0.6541 means 85 -> 87 correct images, only 2 images. With one seed and a small validation set, this isn't enough to say augmentation is better in general. We would need several seeds or more epochs to confirm it.
+
+### Engineering checkpoint 6
+
+**Primary metric:** I chose validation **macro-F1**. It computes the F1 score of each of the 3 classes (`angular_leaf_spot`, `bean_rust`, `healthy`) and averages them with the same weight. A model can have good accuracy while doing badly on one class, for example confusing the two diseases, and accuracy would hide it. Macro-F1 drops if any class is predicted badly, and for a farmer, missing one disease matters as much as missing the other. Our classes are nearly balanced, so accuracy and macro-F1 are close here, but macro-F1 is still the safer choice. The tie-break on lower `val_loss` prefers the model whose predicted probabilities are more confident on the right class.
+
+**Test set only after choosing:** the test set must estimate how the chosen model performs on new, unseen data. If I used it to compare A, B and C and kept the best, I would be selecting on the test set: the score would be optimistic because the choice was fitted to those 128 images, and I would have no unbiased data left to check the final model. So I choose with validation only, freeze the Run ID, and evaluate on the test set once at the end.

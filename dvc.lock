@@ -119,8 +119,8 @@ stages:
       size: 1081
     - path: src/provenance.py
       hash: md5
-      md5: f1c812f245b0d13873aea36db16f40c5
-      size: 3868
+      md5: c6c839afd9ac2e48705edeed2a752a11
+      size: 4301
     - path: src/reproducibility.py
       hash: md5
       md5: b238b6a39e2653a5392d6bffee08aa12
@@ -135,7 +135,7 @@ stages:
       size: 373304
     params:
       params.yaml:
-        augmentation.enabled: false
+        augmentation.enabled: true
         augmentation.horizontal_flip: 0.5
         augmentation.rotation_degrees: 10
         compute.device: auto
@@ -145,22 +145,22 @@ stages:
         train.batch_size: 32
         train.dropout: 0.3
         train.epochs: 4
-        train.learning_rate: 0.0003
+        train.learning_rate: 0.001
         train.random_state: 42
     outs:
     - path: models/model.pt
       hash: md5
-      md5: 112b8561d5d36f53c2a02f8d18367c00
+      md5: d92ddd04c7eb1b6911bc48fb777df243
       size: 98673
     - path: reports/run_manifest.json
       hash: md5
-      md5: d91d1136ed96410b3691ef60761548f1
-      size: 815
+      md5: 7190f77396b9561a5de4c17f94702dfa
+      size: 814
     - path: reports/train_summary.json
       hash: md5
-      md5: 1df0289aac41c12c9bb923407fc33f9f
-      size: 256
+      md5: 224f0d46818c5d167ba28dd2e91e2dd9
+      size: 255
     - path: reports/training_curves.png
       hash: md5
-      md5: f3ab51a44453b7f00751a7a2eef12672
-      size: 104969
+      md5: b3f67585cb6fa663d40fdba39d8458dd
+      size: 93824
