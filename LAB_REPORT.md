@@ -71,3 +71,11 @@ These small differences add up over training. The seed gives identical results o
 - **Which file has scores DVC should track as metrics?** `reports/test_metrics.json` (final test accuracy and macro-F1). I also marked `reports/train_summary.json` as metrics because it holds the validation scores, so `dvc metrics show` can compare runs.
 
 **Note:** EVALUATE also depends on the train/validation manifests, because `evaluate.py` recomputes `training_data_identity()` to check that the selected Run was trained on the current data. It doesn't depend on `model.pt`, since the model comes from MLflow, which keeps the test set out of the TRAIN branch.
+
+## Milestone 5 - Record what each MLflow Run used
+
+### Engineering checkpoint 4
+
+- **Git** records the exact code and configuration of the Run: the commit SHA (and dirty flag) stored in the manifest points to the version of `src/`, `params.yaml`, `dvc.yaml` and `uv.lock` that was used.
+- **DVC** records the data and pipeline state: `data/raw.dvc` and `dvc.lock` store the hashes of the raw images, prepared data, params and outputs, so the same inputs can be restored with `dvc pull` / `dvc checkout`.
+- **MLflow** records the result of the Run itself: parameters, per-epoch metrics, the training Dataset, the provenance manifest and the logged model that we can later select and load by Run ID.
