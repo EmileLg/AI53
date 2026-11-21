@@ -79,3 +79,33 @@ These small differences add up over training. The seed gives identical results o
 - **Git** records the exact code and configuration of the Run: the commit SHA (and dirty flag) stored in the manifest points to the version of `src/`, `params.yaml`, `dvc.yaml` and `uv.lock` that was used.
 - **DVC** records the data and pipeline state: `data/raw.dvc` and `dvc.lock` store the hashes of the raw images, prepared data, params and outputs, so the same inputs can be restored with `dvc pull` / `dvc checkout`.
 - **MLflow** records the result of the Run itself: parameters, per-epoch metrics, the training Dataset, the provenance manifest and the logged model that we can later select and load by Run ID.
+
+## Milestone 6 - Predict which stages need to run again
+
+### 6.1 Predictions
+
+| Change | VALIDATE | PREPARE | TRAIN | EVALUATE |
+|--------|----------|---------|-------|----------|
+| Change `train.learning_rate` | REUSED | REUSED | RERUN | REUSED |
+| Change `data.image_size` | REUSED | RERUN | RERUN | NEEDS UPDATE |
+| Edit `src/validate_data.py`; the quality report stays the same | RERUN | REUSED | REUSED | REUSED |
+| Edit only `README.md` | REUSED | REUSED | REUSED | REUSED |
+
+### Engineering checkpoint 5
+
+**Setting change: `data.image_size`**
+- VALIDATE: REUSED. It has no `params` in `dvc.yaml`, and its deps (`data/raw`, `validate_data.py`, `uv.lock`, `pyproject.toml`) don't change.
+- PREPARE: RERUN. `data.image_size` is in its `params`, so its inputs changed.
+- TRAIN: RERUN. `data.image_size` is also in its `params`, and its deps `data/processed/train`, `validation` and the manifests are rewritten with the new size.
+- EVALUATE: NEEDS UPDATE. `data.image_size` is in its `params` and `data/processed/test` changes. The selected Run was also trained at the old size, so the saved test results no longer match (`evaluate.py` would even refuse the old Run).
+
+**File edit: `src/validate_data.py` (report unchanged)**
+- VALIDATE: RERUN. `src/validate_data.py` is one of its deps, so its hash changed.
+- PREPARE: REUSED. Its dep is the *output* `reports/data_quality.json`, not the script. The report content is the same, so its hash is the same and none of PREPARE's inputs changed.
+- TRAIN and EVALUATE: REUSED. Their inputs come from PREPARE, which didn't change.
+
+### 6.3 Decisions before training
+
+- **Main validation metric:** `val_macro_f1` at the final epoch. **Tie-break:** if two Runs have the same macro-F1 (to 3 decimals), I choose the lower `val_loss`. Macro-F1 gives the same weight to the 3 classes, so it's a better choice than accuracy if one disease class is predicted badly.
+- **Expected effect of a lower learning rate (0.001 -> 0.0003):** with only 4 epochs, I expect the model to learn more slowly: a higher train and validation loss at each epoch and probably a slightly lower validation macro-F1, but smoother, more stable curves.
+- **Run A (baseline, `learning_rate=0.001`):** `d7f31458868947a8817363e5f98676dc`

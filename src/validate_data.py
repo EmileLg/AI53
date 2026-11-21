@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from PIL import Image
 
+# Image counts of the exact course archives (see DATASET_SOURCE.md).
 EXPECTED_SPLITS = {"train": 1034, "validation": 133, "test": 128}
 EXPECTED_CLASSES = {"angular_leaf_spot", "bean_rust", "healthy"}
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
